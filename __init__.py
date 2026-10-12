@@ -7,11 +7,16 @@ from . import schemas, tools
 
 
 def register(ctx):
-    for schema in schemas.ALL_SCHEMAS:
+    for item in schemas.ALL_SCHEMAS:
+        tool_schema = {
+            **item["parameters"],
+            "description": item["description"],
+        }
+
         ctx.register_tool(
-            name=schema["name"],
+            name=item["name"],
             toolset="n8n_rest",
-            schema=schema,
-            handler=tools.HANDLERS[schema["name"]],
+            schema=tool_schema,
+            handler=tools.HANDLERS[item["name"]],
             emoji="🔁",
         )
