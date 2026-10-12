@@ -29,9 +29,20 @@ def _configuration() -> tuple[str, str]:
     parsed = urllib.parse.urlparse(base_url)
     if parsed.scheme != "https" and parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
         raise N8NRestError("N8N_BASE_URL must use HTTPS except for localhost testing.")
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or not parsed.hostname:
         raise N8NRestError("N8N_BASE_URL is not a valid HTTP(S) URL.")
+    if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise N8NRestError(
+            "N8N_BASE_URL must not contain URL credentials, a query string, or a fragment."
+        )
     return base_url, api_key
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Never forward the API-key header to a redirect destination."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 def _request(method: str, path: str, payload: dict | None = None) -> dict:
@@ -46,8 +57,9 @@ def _request(method: str, path: str, payload: dict | None = None) -> dict:
     if body is not None:
         headers["Content-Type"] = "application/json"
     request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    opener = urllib.request.build_opener(_NoRedirectHandler)
     try:
-        with urllib.request.urlopen(request, timeout=DEFAULT_TIMEOUT) as response:
+        with opener.open(request, timeout=DEFAULT_TIMEOUT) as response:
             raw = response.read(MAX_RESPONSE_BYTES + 1)
             if len(raw) > MAX_RESPONSE_BYTES:
                 raise N8NRestError("n8n response exceeded the 2 MB safety limit.")
