@@ -1,10 +1,16 @@
 """Offline unit tests; these tests never contact a live n8n instance."""
-import json
 import os
 import unittest
 from unittest.mock import patch
 
-from tools import N8NRestError, _configuration, _workflow_id, list_workflows, create_workflow
+from tools import (
+    N8NRestError,
+    _NoRedirectHandler,
+    _configuration,
+    _workflow_id,
+    list_workflows,
+    create_workflow,
+)
 
 
 class ValidationTests(unittest.TestCase):
@@ -23,6 +29,21 @@ class ValidationTests(unittest.TestCase):
             base, key = _configuration()
             self.assertEqual(base, "http://localhost:5678")
             self.assertEqual(key, "test")
+
+    def test_rejects_url_credentials(self):
+        with patch.dict(os.environ, {"N8N_BASE_URL": "https://user:pass@n8n.example.com", "N8N_API_KEY": "test"}):
+            with self.assertRaises(N8NRestError):
+                _configuration()
+
+    def test_rejects_query_and_fragment(self):
+        for url in ("https://n8n.example.com?target=other", "https://n8n.example.com/#fragment"):
+            with self.subTest(url=url), patch.dict(os.environ, {"N8N_BASE_URL": url, "N8N_API_KEY": "test"}):
+                with self.assertRaises(N8NRestError):
+                    _configuration()
+
+    def test_redirects_are_not_followed(self):
+        handler = _NoRedirectHandler()
+        self.assertIsNone(handler.redirect_request(None, None, 302, "Found", {}, "https://attacker.example/"))
 
     def test_workflow_id_is_url_encoded(self):
         self.assertEqual(_workflow_id({"workflow_id": "abc/def"}), "abc%2Fdef")
