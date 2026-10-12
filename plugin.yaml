@@ -1,0 +1,24 @@
+name: hermes-n8n-rest
+version: 0.1.0
+manifest_version: 2
+description: >
+  Optional REST API integration for n8n workflows. Keeps the official
+  n8n-official MCP server as the primary integration path.
+author: OctaLectzz
+kind: backend
+license: MIT
+homepage: https://github.com/OctaLectzz/hermes-n8n-rest
+tags: [hermes, n8n, rest-api, workflows, integration]
+requires_env:
+  - name: N8N_API_KEY
+    description: n8n API key with the minimum permissions required for workflow management
+    secret: true
+  - name: N8N_BASE_URL
+    description: Base URL of your n8n instance, for example https://n8n.example.com
+provides_tools:
+  - n8n_rest_list_workflows
+  - n8n_rest_get_workflow
+  - n8n_rest_create_workflow
+  - n8n_rest_update_workflow
+  - n8n_rest_set_workflow_active
+provides_hooks: []
